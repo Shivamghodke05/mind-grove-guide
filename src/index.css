@@ -153,7 +153,6 @@ All colors MUST be HSL for proper theming.
     --breath-in: 210 65% 65%;
     --breath-out: 145 25% 55%;
     --breath-hold: 260 25% 55%;
-    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -162,7 +161,6 @@ All colors MUST be HSL for proper theming.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-  }
 }
 
 @layer base {
