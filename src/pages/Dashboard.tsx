@@ -5,6 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import MoodTracker from '@/components/MoodTracker';
 import BreathingExercise from '@/components/BreathingExercise';
+import AIChatbot from '@/components/AIChatbot';
+import Resources from '@/components/Resources';
+import Support from '@/components/Support';
+import Booking from '@/components/Booking';
 import { motion } from 'framer-motion';
 import { 
   Heart, 
@@ -17,7 +21,11 @@ import {
   Zap,
   Target,
   Clock,
-  Award
+  Award,
+  MessageCircle,
+  BookOpen,
+  Phone,
+  CalendarDays
 } from 'lucide-react';
 
 interface User {
@@ -304,6 +312,10 @@ const Dashboard: React.FC = () => {
             { id: 'overview', label: 'Overview', icon: TrendingUp },
             { id: 'mood', label: 'Mood Tracker', icon: Heart },
             { id: 'breathing', label: 'Breathing', icon: Brain },
+            { id: 'chatbot', label: 'AI Therapy', icon: MessageCircle },
+            { id: 'resources', label: 'Resources', icon: BookOpen },
+            { id: 'support', label: 'Support', icon: Phone },
+            { id: 'booking', label: 'Book Session', icon: CalendarDays },
           ].map((tab) => (
             <Button
               key={tab.id}
@@ -335,6 +347,10 @@ const Dashboard: React.FC = () => {
               <BreathingExercise />
             </div>
           )}
+          {activeTab === 'chatbot' && <AIChatbot />}
+          {activeTab === 'resources' && <Resources />}
+          {activeTab === 'support' && <Support />}
+          {activeTab === 'booking' && <Booking />}
         </motion.div>
       </div>
     </div>
