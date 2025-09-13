@@ -98,7 +98,7 @@ const BreathingExercise: React.FC = () => {
   };
 
   return (
-    <Card className="max-w-md mx-auto bg-background/50 backdrop-blur-sm">
+    <Card className="max-w-md mx-auto bg-background/50 backdrop-blur-sm ">
       <CardHeader className="text-center pb-2">
         <CardTitle className="flex items-center justify-center gap-2 text-2xl">
           Breathing Exercise
@@ -106,7 +106,7 @@ const BreathingExercise: React.FC = () => {
         <p className="text-muted-foreground">4-7-8 Breathing Technique</p>
       </CardHeader>
       
-      <CardContent className="text-center space-y-6">
+      <CardContent className="text-center space-y-6 text-b">
         {/* Breathing Circle */}
         <div className="relative flex items-center justify-center h-64">
           <motion.div
@@ -141,11 +141,11 @@ const BreathingExercise: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="text-center"
               >
-                <div className="text-white font-semibold text-lg">
+                <div className="text-black dark:text-white font-semibold text-lg">
                   {phaseMessages[phase]}
                 </div>
                 {isActive && (
-                  <div className="text-white/80 text-sm mt-1">
+                  <div className="text-black/80 dark:text-white/80 text-sm mt-1">
                     {Math.ceil((phaseDurations[phase] * (100 - progress)) / 100)}s
                   </div>
                 )}

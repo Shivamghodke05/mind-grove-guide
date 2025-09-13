@@ -41,6 +41,7 @@ interface User {
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -50,7 +51,22 @@ const Dashboard: React.FC = () => {
       // Redirect to auth if not logged in
       window.location.href = '/auth';
     }
+
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    
+    setDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
   }, []);
+
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', newDarkMode);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -301,22 +317,30 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-calm">
       {/* Header */}
-      <div className="border-b border-border bg-background/50 backdrop-blur-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="mr-4 hidden md:flex">
+            <a className="mr-6 flex items-center space-x-2" href="/">
               <Heart className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">MindEase</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Badge variant="outline">{user.institution}</Badge>
-              <Button variant="outline" size="sm">
-                Sign Out
-              </Button>
-            </div>
+              <span className="hidden font-bold sm:inline-block">
+                MindEase
+              </span>
+            </a>
+          </div>
+
+          <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+            <Badge variant="outline">{user.institution}</Badge>
+            <Button variant="outline" size="icon" onClick={toggleDarkMode}>
+              {darkMode ? <Sun className="h-[1.2rem] w-[1.2rem]" /> : <Moon className="h-[1.2rem] w-[1.2rem]" />}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="container mx-auto px-4 py-8">
         {/* Navigation Tabs */}

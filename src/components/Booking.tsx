@@ -65,38 +65,38 @@ const Booking: React.FC = () => {
   const therapists: Therapist[] = [
     {
       id: '1',
-      name: 'Dr. Sarah Johnson',
+      name: 'Dr. Piyush Udapurkar',
       title: 'Licensed Clinical Psychologist',
       specialties: ['Anxiety', 'Depression', 'Trauma', 'CBT'],
       rating: 4.9,
       experience: '12 years',
-      rate: '$150/session',
+      rate: '$15/session ( Free for Students)',
       availability: ['Mon', 'Wed', 'Fri'],
-      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&h=300&fit=crop&crop=face',
+      image: '',
       bio: 'Specializing in cognitive behavioral therapy and trauma-informed care.'
     },
     {
       id: '2',
-      name: 'Dr. Michael Chen',
+      name: 'Dr. Siddhi Gite',
       title: 'Licensed Marriage & Family Therapist',
-      specialties: ['Couples Therapy', 'Family Counseling', 'Communication'],
+      specialties: ['Couples Therapy', 'Counseling', 'Communication'],
       rating: 4.8,
       experience: '8 years',
-      rate: '$130/session',
+      rate: '$13/session ( Free for Students )',
       availability: ['Tue', 'Thu', 'Sat'],
-      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=300&h=300&fit=crop&crop=face',
+      image: '',
       bio: 'Helping couples and families build stronger, healthier relationships.'
     },
     {
       id: '3',
-      name: 'Dr. Emily Rodriguez',
+      name: 'Dr. Aditi Sorate',
       title: 'Licensed Social Worker',
       specialties: ['Teen Counseling', 'ADHD', 'Behavioral Issues'],
       rating: 4.7,
       experience: '6 years',
-      rate: '$120/session',
+      rate: '$12/session ( Free for Students )',
       availability: ['Mon', 'Tue', 'Thu'],
-      image: 'https://images.unsplash.com/photo-1594824405743-1b42b8c9ac54?w=300&h=300&fit=crop&crop=face',
+      image: '',
       bio: 'Passionate about helping adolescents navigate life challenges.'
     }
   ];
@@ -115,7 +115,7 @@ const Booking: React.FC = () => {
   const mockAppointments: Appointment[] = [
     {
       id: '1',
-      therapist: 'Dr. Sarah Johnson',
+      therapist: 'Dr. Piyush Udapurkar',
       date: new Date('2024-01-15'),
       time: '2:00 PM',
       type: 'Individual Therapy',
@@ -123,7 +123,7 @@ const Booking: React.FC = () => {
     },
     {
       id: '2',
-      therapist: 'Dr. Michael Chen',
+      therapist: 'Dr. Siddhi Gite',
       date: new Date('2024-01-08'),
       time: '10:00 AM',
       type: 'Couples Therapy',
