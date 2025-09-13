@@ -12,6 +12,7 @@ import Booking from '@/components/Booking';
 import { motion } from 'framer-motion';
 import { 
   Heart, 
+  LogOut,
   Brain, 
   Calendar, 
   Trophy, 
@@ -27,6 +28,8 @@ import {
   Phone,
   CalendarDays
 } from 'lucide-react';
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
 
 interface User {
   email: string;
@@ -48,6 +51,16 @@ const Dashboard: React.FC = () => {
       window.location.href = '/auth';
     }
   }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('user'); // Clear local storage on sign out
+      window.location.href = '/auth'; // Redirect to login page
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   // Mock data for dashboard
   const mockStats = {

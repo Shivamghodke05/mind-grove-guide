@@ -14,6 +14,7 @@ import {
   Sparkles,
   RotateCcw
 } from 'lucide-react';
+import { generativeModel } from '../generative-ai';
 
 interface Message {
   id: string;
@@ -44,44 +45,16 @@ const AIChatbot: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Mock AI responses based on keywords
-  const generateAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('anxiety') || lowerMessage.includes('anxious') || lowerMessage.includes('worried')) {
-      return "I understand you're feeling anxious. That's completely valid. Try this: Take three deep breaths with me. Breathe in for 4 counts, hold for 4, and exhale for 6. Remember, anxiety is temporary, and you have the strength to get through this. What specifically is making you feel anxious?";
+  const generateAIResponse = async (userMessage: string): Promise<string> => {
+    try {
+      const result = await generativeModel.generateContent(userMessage);
+      const response = await result.response;
+      const text = response.text();
+      return text;
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      return "I'm sorry, I'm having some trouble right now. Please try again later.";
     }
-    
-    if (lowerMessage.includes('sad') || lowerMessage.includes('depressed') || lowerMessage.includes('down')) {
-      return "I hear that you're feeling down, and I want you to know that your feelings are valid. Depression can make everything feel overwhelming, but you're not alone. Have you been able to do any small self-care activities today? Even tiny steps count. What's one thing you're grateful for right now?";
-    }
-    
-    if (lowerMessage.includes('stress') || lowerMessage.includes('overwhelmed')) {
-      return "Feeling stressed and overwhelmed is so common, especially in today's world. Let's break this down together. What's the biggest source of stress for you right now? Sometimes just naming it can help reduce its power over us. Would you like to try a quick mindfulness exercise?";
-    }
-    
-    if (lowerMessage.includes('sleep') || lowerMessage.includes('tired') || lowerMessage.includes('insomnia')) {
-      return "Sleep issues can really impact our mental health. Good sleep hygiene is crucial for emotional wellbeing. Try creating a bedtime routine: no screens 1 hour before sleep, keep your room cool and dark, and try some gentle stretching or meditation. What's your current sleep routine like?";
-    }
-    
-    if (lowerMessage.includes('thank') || lowerMessage.includes('better') || lowerMessage.includes('helped')) {
-      return "I'm so glad I could help! Remember, healing isn't linear - you'll have good days and challenging days, and that's completely normal. You're doing great by reaching out and taking care of your mental health. What's one thing you're looking forward to?";
-    }
-    
-    if (lowerMessage.includes('how are you')) {
-      return "Thank you for asking! As an AI, I don't have feelings, but I'm here and ready to support you. I'm designed to listen without judgment and offer coping strategies. What brings you here today? How can I help you feel better?";
-    }
-
-    // Default responses
-    const defaultResponses = [
-      "That sounds really challenging. Can you tell me more about how this is affecting you?",
-      "I hear you, and I want you to know that your feelings are completely valid. What do you think might help you feel better right now?",
-      "Thank you for sharing that with me. It takes courage to open up. What support do you have in your life?",
-      "I'm here to listen. Sometimes just talking through our thoughts can help us process them better. What's on your mind?",
-      "That's a lot to handle. Remember, you don't have to face this alone. What coping strategies have you tried before?",
-    ];
-    
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
   const handleSendMessage = async () => {
@@ -98,18 +71,17 @@ const AIChatbot: React.FC = () => {
     setInputText('');
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: generateAIResponse(inputText),
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500 + Math.random() * 1000); // Random delay between 1.5-2.5 seconds
+    const aiResponseText = await generateAIResponse(inputText);
+
+    const aiMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      text: aiResponseText,
+      sender: 'ai',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, aiMessage]);
+    setIsTyping(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

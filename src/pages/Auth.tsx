@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Heart, Mail, Lock, User, GraduationCap, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "../firebase";
 
 type AuthMode = 'signin' | 'signup' | 'userType';
 type UserType = 'student' | 'institute' | null;
@@ -20,15 +22,36 @@ const Auth: React.FC = () => {
     name: '',
     institution: '',
   });
+  const [loading, setLoading] = useState(false);
 
   const handleUserTypeSelection = (type: UserType) => {
     setUserType(type);
     setMode('signup');
   };
 
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      localStorage.setItem('user', JSON.stringify({
+        email: user.email,
+        name: user.displayName,
+        userType: 'student', // default to student for Google sign-in
+      }));
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error("Error during Google sign-in:", error);
+      alert("Failed to sign in with Google. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setLoading(true);
     // Mock authentication - in a real app, this would call an API
     console.log('Auth attempt:', { mode, userType, formData });
     
@@ -40,6 +63,7 @@ const Auth: React.FC = () => {
       institution: formData.institution,
     }));
     
+    setLoading(false);
     // Redirect based on user type
     if (userType === 'institute') {
       // Redirect to institute dashboard (mock)
@@ -259,15 +283,16 @@ const Auth: React.FC = () => {
                 type="submit" 
                 className="w-full gradient-primary text-primary-foreground border-0"
                 size="lg"
+                disabled={loading}
               >
-                {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                {loading ? 'Please wait...' : (mode === 'signin' ? 'Sign In' : 'Create Account')}
               </Button>
             </form>
 
             <div className="mt-6">
               <Separator className="mb-4" />
-              <Button variant="outline" className="w-full" type="button">
-                Continue with Google
+              <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={loading}>
+                {loading ? 'Please wait...' : 'Continue with Google'}
               </Button>
             </div>
 
