@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,11 +21,14 @@ import {
   Video,
   Users,
   Heart,
-  Brain,
   MessageCircle,
   DollarSign
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { db, auth } from '../firebase';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import emailjs from 'emailjs-com';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface Therapist {
   id: string;
@@ -60,6 +63,7 @@ const Booking: React.FC = () => {
     email: '',
     phone: ''
   });
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const { toast } = useToast();
 
   const therapists: Therapist[] = [
@@ -112,26 +116,35 @@ const Booking: React.FC = () => {
     '9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
   ];
 
-  const mockAppointments: Appointment[] = [
-    {
-      id: '1',
-      therapist: 'Dr. Piyush Udapurkar',
-      date: new Date('2024-01-15'),
-      time: '2:00 PM',
-      type: 'Individual Therapy',
-      status: 'upcoming'
-    },
-    {
-      id: '2',
-      therapist: 'Dr. Siddhi Gite',
-      date: new Date('2024-01-08'),
-      time: '10:00 AM',
-      type: 'Couples Therapy',
-      status: 'completed'
-    }
-  ];
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in
+        setContactInfo({
+          name: user.displayName || '',
+          email: user.email || '',
+          phone: ''
+        });
 
-  const handleBooking = () => {
+        const q = query(collection(db, "appointments"), where("userEmail", "==", user.email));
+        const querySnapshot = await getDocs(q);
+        const userAppointments = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Appointment));
+        setAppointments(userAppointments);
+      } else {
+        // User is signed out
+        setAppointments([]);
+        setContactInfo({ name: '', email: '', phone: '' });
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+  
+  const handleBooking = async () => {
     if (!selectedDate || !selectedTime || !selectedTherapist || !appointmentType) {
       toast({
         title: "Missing Information",
@@ -141,16 +154,61 @@ const Booking: React.FC = () => {
       return;
     }
 
-    toast({
-      title: "Appointment Booked!",
-      description: "You'll receive a confirmation email shortly.",
-      duration: 3000,
-    });
+    if (!auth.currentUser) {
+      toast({
+        title: "Not Logged In",
+        description: "Please log in to book an appointment.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // Reset form
-    setSelectedTime('');
-    setNotes('');
-    setContactInfo({ name: '', email: '', phone: '' });
+    const newAppointment = {
+      therapist: therapists.find(t => t.id === selectedTherapist)?.name,
+      date: selectedDate,
+      time: selectedTime,
+      type: appointmentTypes.find(t => t.id === appointmentType)?.name,
+      status: 'upcoming',
+      userEmail: auth.currentUser.email,
+      notes,
+    };
+
+    try {
+      const docRef = await addDoc(collection(db, "appointments"), newAppointment);
+      setAppointments([...appointments, { ...newAppointment, id: docRef.id, date: selectedDate }]);
+      
+      const templateParams = {
+        to_name: contactInfo.name || auth.currentUser.displayName,
+        to_email: contactInfo.email || auth.currentUser.email,
+        therapist_name: newAppointment.therapist,
+        appointment_date: newAppointment.date.toLocaleDateString(),
+        appointment_time: newAppointment.time,
+        appointment_type: newAppointment.type,
+      };
+
+      await emailjs.send('service_d4lnf48', 'template_7f7cenm', templateParams, '4yra2Uc5ccaDBZDgj');
+
+      toast({
+        title: "Appointment Booked!",
+        description: "You'll receive a confirmation email shortly.",
+        duration: 3000,
+      });
+
+      // Reset only appointment-specific fields
+      setSelectedTime('');
+      setNotes('');
+      setAppointmentType('');
+      setSelectedTherapist('');
+
+    } catch (error) {
+      console.error("Error booking appointment: ", error);
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      toast({
+        title: "Booking Failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -286,6 +344,7 @@ const Booking: React.FC = () => {
                       value={contactInfo.email}
                       onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
                       placeholder="Enter your email"
+                      disabled
                     />
                   </div>
                   <div>
@@ -492,7 +551,7 @@ const Booking: React.FC = () => {
 
         <TabsContent value="appointments">
           <div className="space-y-4">
-            {mockAppointments.map((appointment, index) => (
+            {appointments.map((appointment, index) => (
               <motion.div
                 key={appointment.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -513,7 +572,7 @@ const Booking: React.FC = () => {
                           </p>
                           <div className="flex items-center gap-4 mt-1">
                             <span className="text-sm">
-                              {appointment.date.toLocaleDateString()}
+                              {new Date(appointment.date).toLocaleDateString()}
                             </span>
                             <span className="text-sm">{appointment.time}</span>
                           </div>

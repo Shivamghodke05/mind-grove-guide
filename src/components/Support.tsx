@@ -42,6 +42,24 @@ const indianSupportContacts: SupportContact[] = [
     phone: "9820466726",
     type: 'helpline',
   },
+  {
+    name: "NIMHANS",
+    description: "The National Institute of Mental Health and Neuro-Sciences offers a 24/7 toll-free helpline for individuals experiencing mental health distress.",
+    phone: "080-46110007",
+    type: 'government',
+  },
+  {
+    name: "Mitram Foundation",
+    description: "A suicide prevention helpline that offers emotional support to those who are distressed, depressed, or suicidal.",
+    phone: "080-25722573",
+    type: 'helpline',
+  },
+    {
+    name: "Connecting NGO",
+    description: "A non-judgmental listening service for those feeling distressed and suicidal.",
+    phone: "9922001122",
+    type: 'counseling',
+  }
 ];
 
 const Support: React.FC = () => {
@@ -92,7 +110,7 @@ const Support: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 * (index + 1) }}
           >
-            <Card className="h-full bg-background/50 backdrop-blur-sm">
+            <Card className="h-full bg-background/50 backdrop-blur-sm flex flex-col">
               <CardHeader>
                 <CardTitle className="text-lg">{contact.name}</CardTitle>
                 <span 
@@ -104,7 +122,7 @@ const Support: React.FC = () => {
                   {contact.type}
                 </span>
               </CardHeader>
-              <CardContent className="flex flex-col h-full">
+              <CardContent className="flex flex-col flex-grow p-6">
                 <p className="text-muted-foreground text-sm flex-grow">
                   {contact.description}
                 </p>

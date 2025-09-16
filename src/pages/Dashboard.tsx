@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import MoodTracker from '@/components/MoodTracker';
 import BreathingExercise from '@/components/BreathingExercise';
 import AIChatbot from '@/components/AIChatbot';
@@ -26,10 +25,12 @@ import {
   MessageCircle,
   BookOpen,
   Phone,
-  CalendarDays
+  CalendarDays,
+  LucideIcon
 } from 'lucide-react';
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { collection, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
 
 interface User {
   email: string;
@@ -38,21 +39,81 @@ interface User {
   institution: string;
 }
 
+interface MoodEntry {
+  id: string;
+  mood: number;
+  note: string;
+  date: string;
+  energy: number;
+  tags: string[];
+}
+
+interface Appointment {
+  id: string;
+  therapist: string;
+  date: Timestamp;
+  time: string;
+  type: string;
+  status: 'upcoming' | 'completed' | 'cancelled';
+  userEmail: string;
+}
+
+interface DashboardStats {
+  streak: number;
+  weeklyMoodAverage: number;
+  completedSessions: number;
+  totalMinutes: number;
+}
+
+interface Activity {
+  type: string;
+  description: string;
+  createdAt: Date;
+}
+
+const iconMap: { [key: string]: LucideIcon } = {
+  Heart,
+  Brain,
+  Trophy,
+  Award,
+};
+
+const mockActivities: Activity[] = [
+  {
+    type: 'breathing',
+    description: 'Completed a 5-minute breathing exercise',
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+  },
+  {
+    type: 'chat',
+    description: 'Chatted with the AI therapy bot',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+  },
+  {
+    type: 'resources',
+    description: 'Read an article on mindfulness',
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+  },
+];
+
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [darkMode, setDarkMode] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({ 
+    streak: 0, weeklyMoodAverage: 0, completedSessions: 0, totalMinutes: 0 
+  });
+  const [recentActivity, setRecentActivity] = useState<Activity[]>(mockActivities); // Initialize with mock data
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     } else {
-      // Redirect to auth if not logged in
       window.location.href = '/auth';
     }
 
-    // Initialize theme
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
@@ -60,6 +121,92 @@ const Dashboard: React.FC = () => {
     setDarkMode(isDark);
     document.documentElement.classList.toggle('dark', isDark);
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && user.email) {
+        setFirebaseUser(user);
+        fetchDashboardData(user.uid, user.email);
+      } else {
+        setFirebaseUser(null);
+        window.location.href = '/auth';
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const fetchDashboardData = async (userId: string, userEmail: string) => {
+    try {
+      // Fetch appointments
+      const appointmentsQuery = query(collection(db, "appointments"), where("userEmail", "==", userEmail));
+      const appointmentsSnapshot = await getDocs(appointmentsQuery);
+      const appointments = appointmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+      const completedSessions = appointments.filter(a => a.status === 'completed').length;
+
+      // Fetch mood entries
+      const moodQuery = query(collection(db, "users", userId, "moodEntries"), orderBy("date", "desc"));
+      const moodSnapshot = await getDocs(moodQuery);
+      const moodEntries = moodSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MoodEntry));
+
+      // Calculate stats
+      const weeklyMoodAverage = moodEntries.length > 0 ? moodEntries.reduce((acc, entry) => acc + entry.mood, 0) / moodEntries.length : 0;
+      const streak = calculateStreak(moodEntries);
+      const totalMinutes = completedSessions * 50; // Assuming 50 mins per session
+
+      setDashboardStats({ streak, weeklyMoodAverage, completedSessions, totalMinutes });
+
+      // Combine and sort recent activity
+      const moodActivities: Activity[] = moodEntries.slice(0, 3).map(entry => ({
+        type: 'mood',
+        description: `Logged a mood of ${entry.mood}/5`,
+        createdAt: new Date(entry.date),
+      }));
+
+      const appointmentActivities: Activity[] = appointments.slice(0, 2).map(app => ({
+        type: 'appointment',
+        description: `Session with ${app.therapist} - ${app.status}`,
+        createdAt: app.date.toDate(),
+      }));
+
+      let combinedActivities = [...moodActivities, ...appointmentActivities]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // If no real activity, use the mock data
+      if (combinedActivities.length === 0) {
+        setRecentActivity(mockActivities);
+      } else {
+        setRecentActivity(combinedActivities.slice(0, 5));
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      // In case of error, you can still show mock data
+      setRecentActivity(mockActivities);
+    }
+  };
+
+  const calculateStreak = (moodEntries: MoodEntry[]): number => {
+    if (moodEntries.length === 0) return 0;
+    
+    let streak = 1;
+    let lastDate = new Date(moodEntries[0].date);
+    lastDate.setHours(0, 0, 0, 0);
+
+    for (let i = 1; i < moodEntries.length; i++) {
+      const currentDate = new Date(moodEntries[i].date);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = lastDate.getTime() - currentDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        streak++;
+        lastDate = currentDate;
+      } else if (diffDays > 1) {
+        break;
+      }
+    }
+    return streak;
+  };
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -71,60 +218,18 @@ const Dashboard: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem('user'); // Clear local storage on sign out
-      window.location.href = '/auth'; // Redirect to login page
+      localStorage.removeItem('user');
+      window.location.href = '/auth';
     } catch (error) {
       console.error("Error signing out:", error);
     }
   };
 
-  // Mock data for dashboard
-  const mockStats = {
-    weeklyMoodAverage: 3.8,
-    streak: 12,
-    completedSessions: 45,
-    totalMinutes: 890
-  };
-
-  const recentActivities = [
-    { type: 'mood', date: 'Today', description: 'Completed mood check-in' },
-    { type: 'breathing', date: 'Today', description: '5-minute breathing exercise' },
-    { type: 'mood', date: 'Yesterday', description: 'Completed mood check-in' },
-    { type: 'meditation', date: '2 days ago', description: 'Guided meditation session' },
-  ];
-
-  const achievements = [
-    { 
-      title: 'First Steps', 
-      description: 'Completed your first mood check-in', 
-      icon: Heart, 
-      completed: true 
-    },
-    { 
-      title: 'Mindful Week', 
-      description: 'Used breathing exercises 7 days in a row', 
-      icon: Brain, 
-      completed: true 
-    },
-    { 
-      title: 'Consistency Champion', 
-      description: 'Daily check-ins for 30 days', 
-      icon: Trophy, 
-      completed: false 
-    },
-    { 
-      title: 'Zen Master', 
-      description: 'Completed 50 meditation sessions', 
-      icon: Award, 
-      completed: false 
-    }
-  ];
-
-  if (!user) {
+  if (!user || !firebaseUser) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Heart className="h-12 w-12 mx-auto text-primary mb-4" />
+          <Heart className="h-12 w-12 mx-auto text-primary mb-4 animate-pulse" />
           <p className="text-muted-foreground">Loading your dashboard...</p>
         </div>
       </div>
@@ -149,7 +254,7 @@ const Dashboard: React.FC = () => {
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold">{mockStats.streak}</div>
+                <div className="text-3xl font-bold">{dashboardStats.streak}</div>
                 <div className="text-sm text-primary-foreground/80">Day Streak</div>
               </div>
             </div>
@@ -163,25 +268,25 @@ const Dashboard: React.FC = () => {
           { 
             icon: Heart, 
             label: 'Weekly Mood Avg', 
-            value: mockStats.weeklyMoodAverage.toFixed(1),
+            value: dashboardStats.weeklyMoodAverage.toFixed(1),
             color: 'text-red-500' 
           },
           { 
             icon: Zap, 
             label: 'Current Streak', 
-            value: `${mockStats.streak} days`,
+            value: `${dashboardStats.streak} days`,
             color: 'text-yellow-500' 
           },
           { 
             icon: Target, 
             label: 'Sessions Done', 
-            value: mockStats.completedSessions,
+            value: dashboardStats.completedSessions,
             color: 'text-blue-500' 
           },
           { 
             icon: Clock, 
             label: 'Total Minutes', 
-            value: `${mockStats.totalMinutes}m`,
+            value: `${dashboardStats.totalMinutes}m`,
             color: 'text-green-500' 
           }
         ].map((stat, index) => (
@@ -254,12 +359,12 @@ const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
+            {recentActivity.map((activity, index) => (
               <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                 <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <div className="flex-1">
                   <div className="font-medium text-sm">{activity.description}</div>
-                  <div className="text-xs text-muted-foreground">{activity.date}</div>
+                  <div className="text-xs text-muted-foreground">{new Date(activity.createdAt).toLocaleDateString()}</div>
                 </div>
               </div>
             ))}
@@ -267,50 +372,6 @@ const Dashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Achievements */}
-      <Card className="bg-background/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Achievements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {achievements.map((achievement, index) => (
-              <div 
-                key={achievement.title}
-                className={`p-4 rounded-lg border ${
-                  achievement.completed 
-                    ? 'bg-success/10 border-success/20' 
-                    : 'bg-muted/50 border-border'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    achievement.completed ? 'bg-success/20' : 'bg-muted'
-                  }`}>
-                    <achievement.icon className={`h-5 w-5 ${
-                      achievement.completed ? 'text-success' : 'text-muted-foreground'
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-sm">{achievement.title}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {achievement.description}
-                    </p>
-                    {achievement.completed && (
-                      <Badge variant="default" className="mt-2 bg-success text-success-foreground">
-                        Completed
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -378,7 +439,7 @@ const Dashboard: React.FC = () => {
           transition={{ duration: 0.3 }}
         >
           {activeTab === 'overview' && renderOverviewTab()}
-          {activeTab === 'mood' && <MoodTracker />}
+          {activeTab === 'mood' && <MoodTracker userId={firebaseUser.uid} />}
           {activeTab === 'breathing' && (
             <div className="flex justify-center">
               <BreathingExercise />

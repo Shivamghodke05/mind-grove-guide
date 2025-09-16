@@ -6,8 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Heart, Mail, Lock, User, GraduationCap, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth } from "../firebase";
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword 
+} from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 type AuthMode = 'signin' | 'signup' | 'userType';
 type UserType = 'student' | 'institute' | null;
@@ -23,6 +29,7 @@ const Auth: React.FC = () => {
     institution: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleUserTypeSelection = (type: UserType) => {
     setUserType(type);
@@ -31,46 +38,124 @@ const Auth: React.FC = () => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setError('');
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      localStorage.setItem('user', JSON.stringify({
-        email: user.email,
-        name: user.displayName,
-        userType: 'student', // default to student for Google sign-in
-      }));
-      window.location.href = '/dashboard';
+
+      // Check if user exists in Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        localStorage.setItem('user', JSON.stringify(userData));
+        if (userData.userType === 'institute') {
+          window.location.href = '/institute-dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      } else {
+        // New user, for now, default to student and redirect to dashboard to complete profile
+        // This will be improved in the next step to ask for user type.
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName,
+          userType: 'student',
+          institution: ''
+        };
+        await setDoc(userDocRef, userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        window.location.href = '/dashboard'; // Redirect to a profile completion page if you have one
+      }
     } catch (error) {
       console.error("Error during Google sign-in:", error);
-      alert("Failed to sign in with Google. Please try again.");
+      setError("Failed to sign in with Google. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Mock authentication - in a real app, this would call an API
-    console.log('Auth attempt:', { mode, userType, formData });
-    
-    // Simulate successful authentication
-    localStorage.setItem('user', JSON.stringify({
-      email: formData.email,
-      name: formData.name,
-      userType,
-      institution: formData.institution,
-    }));
-    
-    setLoading(false);
-    // Redirect based on user type
-    if (userType === 'institute') {
-      // Redirect to institute dashboard (mock)
-      alert('Welcome to the Institute Dashboard! (Mock redirect)');
-    } else {
-      // Redirect to student dashboard
-      window.location.href = '/dashboard';
+    setError('');
+
+    if (mode === 'signup') {
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match.");
+        setLoading(false);
+        return;
+      }
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        const user = userCredential.user;
+
+        const userData = {
+          uid: user.uid,
+          email: formData.email,
+          name: formData.name,
+          userType: userType,
+          institution: formData.institution,
+        };
+
+        await setDoc(doc(db, "users", user.uid), userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+
+        if (userType === 'institute') {
+          window.location.href = '/institute-dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+          setError('This email is already in use. Please sign in.');
+        } else {
+          setError('Failed to create an account. Please try again.');
+          console.error("Error during sign-up:", error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    } else { // signin mode
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        const user = userCredential.user;
+
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          localStorage.setItem('user', JSON.stringify(userData));
+
+          if (userData.userType === 'institute') {
+            window.location.href = '/institute-dashboard';
+          } else {
+            window.location.href = '/dashboard';
+          }
+        } else {
+          setError("User data not found. Please sign up.");
+          auth.signOut();
+        }
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          setError('Invalid email or password. Please try again.');
+        } else {
+          setError('Failed to sign in. Please try again.');
+          console.error("Error during sign-in:", error);
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -188,6 +273,7 @@ const Auth: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && <p className="text-destructive text-sm text-center">{error}</p>}
               {mode === 'signup' && (
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
@@ -224,16 +310,19 @@ const Auth: React.FC = () => {
                 </div>
               </div>
 
-              {mode === 'signup' && userType === 'student' && (
+              {mode === 'signup' && (userType === 'student' || userType === 'institute') && (
                 <div className="space-y-2">
                   <Label htmlFor="institution">Institution</Label>
                   <div className="relative">
-                    <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    {userType === 'student' ? 
+                      <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" /> :
+                      <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    }
                     <Input
                       id="institution"
                       name="institution"
                       type="text"
-                      placeholder="Enter your school/university"
+                      placeholder={userType === 'student' ? "Enter your school/university" : "Enter your institution's name"}
                       value={formData.institution}
                       onChange={handleInputChange}
                       className="pl-10"
@@ -300,14 +389,14 @@ const Auth: React.FC = () => {
               {mode === 'signin' ? (
                 <>
                   <button
-                    onClick={() => setMode('signup')}
+                    onClick={() => { setMode('signup'); setError(''); }}
                     className="text-primary hover:text-primary-dark text-sm transition-colors"
                   >
                     Don't have an account? Sign up
                   </button>
                   <br />
                   <button
-                    onClick={() => setMode('userType')}
+                    onClick={() => { setMode('userType'); setError(''); }}
                     className="text-muted-foreground hover:text-foreground text-xs transition-colors mt-2"
                   >
                     Change user type
@@ -316,14 +405,14 @@ const Auth: React.FC = () => {
               ) : (
                 <>
                   <button
-                    onClick={() => setMode('signin')}
+                    onClick={() => { setMode('signin'); setError(''); }}
                     className="text-primary hover:text-primary-dark text-sm transition-colors"
                   >
                     Already have an account? Sign in
                   </button>
                   <br />
                   <button
-                    onClick={() => setMode('userType')}
+                    onClick={() => { setMode('userType'); setError(''); }}
                     className="text-muted-foreground hover:text-foreground text-xs transition-colors mt-2"
                   >
                     Change user type

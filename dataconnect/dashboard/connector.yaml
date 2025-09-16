@@ -1,4 +1,7 @@
-connectorId: example
+connectorId: dashboard
+query: dashboard.gql
+sdk:
+  javascript: {}
 generate:
   javascriptSdk:
     - outputDir: ../../src/dataconnect-generated
