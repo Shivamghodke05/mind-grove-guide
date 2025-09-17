@@ -49,3 +49,23 @@ type UserAchievement @table(key: ["user", "achievement"]) {
   achievement: Achievement!
   unlockedAt: Timestamp! @default(expr: "request.time")
 }
+
+# Represents a quiz result for a user.
+type QuizResult @table {
+  id: UUID! @default(expr: "uuidV4()")
+  user: User!
+  quizId: String!
+  quizTitle: String!
+  score: Int!
+  resultText: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+extend type Mutation {
+  createQuizResult(
+    quizId: String!,
+    quizTitle: String!,
+    score: Int!,
+    resultText: String!
+  ): QuizResult
+}

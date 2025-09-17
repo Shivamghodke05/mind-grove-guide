@@ -22,13 +22,17 @@ import {
   Users,
   Heart,
   MessageCircle,
-  DollarSign
+  DollarSign,
+  CreditCard,
+  QrCode
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from '../firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import emailjs from 'emailjs-com';
 import { onAuthStateChanged } from 'firebase/auth';
+
+// TODO: Replace with a real payment provider SDK (e.g., Razorpay, Stripe)
 
 interface Therapist {
   id: string;
@@ -41,6 +45,7 @@ interface Therapist {
   availability: string[];
   image: string;
   bio: string;
+  isPinned?: boolean;
 }
 
 interface Appointment {
@@ -65,8 +70,22 @@ const Booking: React.FC = () => {
   });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const { toast } = useToast();
+  const [paymentStep, setPaymentStep] = useState<string>('');
 
   const therapists: Therapist[] = [
+    {
+      id: '0',
+      name: 'Dr. Nagesh Rajopadhye',
+      title: 'College Counsellor',
+      specialties: ['Student Stress', 'Career Guidance', 'Academic Pressure'],
+      rating: 5.0,
+      experience: '15 years',
+      rate: 'Free for Students',
+      availability: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      image: '',
+      bio: 'Dedicated to helping students navigate the challenges of college life.',
+      isPinned: true,
+    },
     {
       id: '1',
       name: 'Dr. Piyush Udapurkar',
@@ -74,35 +93,72 @@ const Booking: React.FC = () => {
       specialties: ['Anxiety', 'Depression', 'Trauma', 'CBT'],
       rating: 4.9,
       experience: '12 years',
-      rate: '$15/session ( Free for Students)',
+      rate: '₹400/session (Discounted for Students)',
       availability: ['Mon', 'Wed', 'Fri'],
       image: '',
       bio: 'Specializing in cognitive behavioral therapy and trauma-informed care.'
     },
     {
       id: '2',
+      name: 'Dr. Shivam Ghodke',
+      title: 'Clinical Psychologist',
+      specialties: ['OCD', 'Phobias', 'Panic Attacks'],
+      rating: 4.9,
+      experience: '9 years',
+      rate: '₹300/session (Discounted for Students)',
+      availability: ['Mon', 'Tue', 'Wed', 'Thu'],
+      image: '',
+      bio: 'Specializes in exposure therapy and cognitive-behavioral techniques.'
+    },
+    {
+      id: '3',
       name: 'Dr. Siddhi Gite',
       title: 'Licensed Marriage & Family Therapist',
       specialties: ['Couples Therapy', 'Counseling', 'Communication'],
       rating: 4.8,
       experience: '8 years',
-      rate: '$13/session ( Free for Students )',
+      rate: '₹400/session (Discounted for Students)',
       availability: ['Tue', 'Thu', 'Sat'],
       image: '',
       bio: 'Helping couples and families build stronger, healthier relationships.'
     },
     {
-      id: '3',
+      id: '4',
       name: 'Dr. Aditi Sorate',
       title: 'Licensed Social Worker',
       specialties: ['Teen Counseling', 'ADHD', 'Behavioral Issues'],
       rating: 4.7,
       experience: '6 years',
-      rate: '$12/session ( Free for Students )',
+      rate: '₹300/session (Discounted for Students)',
       availability: ['Mon', 'Tue', 'Thu'],
       image: '',
       bio: 'Passionate about helping adolescents navigate life challenges.'
-    }
+    },
+    {
+      id: '5',
+      name: 'Dr. Vrushali Gaikwad',
+      title: 'Psychiatrist',
+      specialties: ['Depression', 'Bipolar Disorder', 'Anxiety'],
+      rating: 4.8,
+      experience: '10 years',
+      rate: '₹400/session (Discounted for Students)',
+      availability: ['Mon', 'Wed', 'Fri'],
+      image: '',
+      bio: 'Focuses on medication management and therapy for mood disorders.'
+    },
+    {
+      id: '6',
+      name: 'Dr. Pranav Wagh',
+      title: 'Counseling Psychologist',
+      specialties: ['Relationships', 'Stress Management', 'Self-esteem'],
+      rating: 4.7,
+      experience: '7 years',
+      rate: '₹300/session (Discounted for Students)',
+      availability: ['Tue', 'Thu', 'Sat'],
+      image: '',
+      bio: 'Empowering individuals to overcome personal challenges and improve their well-being.'
+    },
+    
   ];
 
   const appointmentTypes = [
@@ -163,12 +219,21 @@ const Booking: React.FC = () => {
       return;
     }
 
+    // TODO: Implement actual payment logic here with a payment provider
+    // For now, we'll simulate a successful payment
+    
+    toast({
+      title: "Payment Successful!",
+      description: "Your payment has been processed.",
+      duration: 2000,
+    });
+
     const newAppointment = {
       therapist: therapists.find(t => t.id === selectedTherapist)?.name,
       date: selectedDate,
       time: selectedTime,
       type: appointmentTypes.find(t => t.id === appointmentType)?.name,
-      status: 'upcoming',
+      status: 'upcoming' as 'upcoming',
       userEmail: auth.currentUser.email,
       notes,
     };
@@ -199,6 +264,7 @@ const Booking: React.FC = () => {
       setNotes('');
       setAppointmentType('');
       setSelectedTherapist('');
+      setPaymentStep('');
 
     } catch (error) {
       console.error("Error booking appointment: ", error);
@@ -309,6 +375,7 @@ const Booking: React.FC = () => {
                         <SelectItem key={therapist.id} value={therapist.id}>
                           <div className="flex items-center gap-2">
                             <span>{therapist.name}</span>
+                            {therapist.isPinned && <Badge variant="destructive">College Counsellor</Badge>}
                             <Badge variant="secondary">{therapist.rate}</Badge>
                           </div>
                         </SelectItem>
@@ -411,7 +478,7 @@ const Booking: React.FC = () => {
                         key={time}
                         variant={selectedTime === time ? "default" : "outline"}
                         onClick={() => setSelectedTime(time)}
-                        className={`${
+                        className={`transition-all ${
                           selectedTime === time 
                             ? 'gradient-primary text-primary-foreground border-0' 
                             : ''
@@ -425,7 +492,7 @@ const Booking: React.FC = () => {
               </Card>
 
               {/* Booking Summary */}
-              {selectedDate && selectedTime && selectedTherapist && appointmentType && (
+              {selectedDate && selectedTime && selectedTherapist && appointmentType && !paymentStep && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -468,14 +535,77 @@ const Booking: React.FC = () => {
                         </span>
                       </div>
                       <Button 
-                        onClick={handleBooking}
+                        onClick={() => setPaymentStep('payment')}
                         className="w-full gradient-primary text-primary-foreground border-0 mt-4"
                       >
-                        Confirm Booking
+                        Proceed to Payment
                       </Button>
                     </CardContent>
                   </Card>
                 </motion.div>
+              )}
+
+              {/* Payment Section */}
+              {paymentStep === 'payment' && (
+                 <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.3 }}
+               >
+                 <Card className="bg-background/50 backdrop-blur-sm">
+                   <CardHeader>
+                     <CardTitle className="flex items-center gap-2">
+                       <DollarSign className="h-5 w-5" />
+                       Payment
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                     <Tabs defaultValue="card">
+                       <TabsList className="grid w-full grid-cols-2">
+                         <TabsTrigger value="card"><CreditCard className="h-4 w-4 mr-2" />Card</TabsTrigger>
+                         <TabsTrigger value="qr"><QrCode className="h-4 w-4 mr-2" />QR Code</TabsTrigger>
+                       </TabsList>
+                       <TabsContent value="card" className="pt-4 space-y-4">
+                         <div>
+                           <Label htmlFor="cardNumber">Card Number</Label>
+                           <Input id="cardNumber" placeholder="xxxx xxxx xxxx xxxx" />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                           <div>
+                             <Label htmlFor="expiryDate">Expiry Date</Label>
+                             <Input id="expiryDate" placeholder="MM/YY" />
+                           </div>
+                           <div>
+                             <Label htmlFor="cvc">CVC</Label>
+                             <Input id="cvc" placeholder="xxx" />
+                           </div>
+                         </div>
+                         <Button 
+                           onClick={handleBooking}
+                           className="w-full gradient-primary text-primary-foreground border-0 mt-4"
+                         >
+                           Pay {therapists.find(t => t.id === selectedTherapist)?.rate.split('/')[0]}
+                         </Button>
+                       </TabsContent>
+                       <TabsContent value="qr" className="pt-4 flex flex-col items-center space-y-3">
+                          {/* TODO: Generate a real QR code using your payment provider */}
+                         <div className="w-48 h-48 bg-gray-200 rounded-md flex items-center justify-center">
+                           <p className="text-sm text-gray-500">[QR Code Placeholder]</p>
+                         </div>
+                         <p className="text-sm text-muted-foreground text-center">
+                           Scan this QR code with any UPI app to complete the payment.
+                         </p>
+                         <Button 
+                           onClick={handleBooking} // This would ideally check payment status
+                           className="w-full gradient-primary text-primary-foreground border-0 mt-4"
+                         >
+                           Confirm Payment
+                         </Button>
+                       </TabsContent>
+                     </Tabs>
+                   </CardContent>
+                 </Card>
+               </motion.div>
               )}
             </div>
           </div>
@@ -500,6 +630,7 @@ const Booking: React.FC = () => {
                       />
                       <h3 className="font-semibold">{therapist.name}</h3>
                       <p className="text-sm text-muted-foreground">{therapist.title}</p>
+                      {therapist.isPinned && <Badge variant="destructive" className="mt-2">College Counsellor</Badge>}
                       <div className="flex items-center justify-center gap-1 mt-2">
                         <Star className="h-4 w-4 text-yellow-500 fill-current" />
                         <span className="text-sm">{therapist.rating}</span>

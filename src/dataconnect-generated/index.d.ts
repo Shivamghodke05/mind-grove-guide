@@ -33,6 +33,11 @@ export interface MoodEntry_Key {
   __typename?: 'MoodEntry_Key';
 }
 
+export interface QuizResult_Key {
+  id: UUIDString;
+  __typename?: 'QuizResult_Key';
+}
+
 export interface UserAchievement_Key {
   userId: string;
   achievementId: UUIDString;

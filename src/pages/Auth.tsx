@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,19 @@ const Auth: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      const userData = JSON.parse(user);
+      if (userData.userType === 'institute') {
+        navigate('/institute-dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const handleUserTypeSelection = (type: UserType) => {
     setUserType(type);
@@ -44,7 +58,6 @@ const Auth: React.FC = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user exists in Firestore
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -52,23 +65,21 @@ const Auth: React.FC = () => {
         const userData = userDocSnap.data();
         localStorage.setItem('user', JSON.stringify(userData));
         if (userData.userType === 'institute') {
-          window.location.href = '/institute-dashboard';
+          navigate('/institute-dashboard', { replace: true });
         } else {
-          window.location.href = '/dashboard';
+          navigate('/dashboard', { replace: true });
         }
       } else {
-        // New user, for now, default to student and redirect to dashboard to complete profile
-        // This will be improved in the next step to ask for user type.
         const userData = {
           uid: user.uid,
           email: user.email,
           name: user.displayName,
-          userType: 'student',
+          userType: 'student', // Default to student
           institution: ''
         };
         await setDoc(userDocRef, userData);
         localStorage.setItem('user', JSON.stringify(userData));
-        window.location.href = '/dashboard'; // Redirect to a profile completion page if you have one
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
       console.error("Error during Google sign-in:", error);
@@ -111,9 +122,9 @@ const Auth: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(userData));
 
         if (userType === 'institute') {
-          window.location.href = '/institute-dashboard';
+          navigate('/institute-dashboard', { replace: true });
         } else {
-          window.location.href = '/dashboard';
+          navigate('/dashboard', { replace: true });
         }
       } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
@@ -138,9 +149,9 @@ const Auth: React.FC = () => {
           localStorage.setItem('user', JSON.stringify(userData));
 
           if (userData.userType === 'institute') {
-            window.location.href = '/institute-dashboard';
+            navigate('/institute-dashboard', { replace: true });
           } else {
-            window.location.href = '/dashboard';
+            navigate('/dashboard', { replace: true });
           }
         } else {
           setError("User data not found. Please sign up.");
