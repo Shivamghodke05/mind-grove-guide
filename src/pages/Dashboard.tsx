@@ -9,10 +9,12 @@ import AIChatbot from '@/components/AIChatbot';
 import Resources from '@/components/Resources';
 import Support from '@/components/Support';
 import Booking from '@/components/Booking';
+import Games from '@/components/Games';
+import Community from '@/components/Community';
 import { MentalHealthQuizzes } from '@/components/MentalHealthQuizzes';
 import { motion } from 'framer-motion';
+import logo from '/logo.png';
 import { 
-  Heart, 
   LogOut,
   Brain, 
   Calendar, 
@@ -29,6 +31,8 @@ import {
   Phone,
   CalendarDays,
   ClipboardList, 
+  Gamepad,
+  Users,
   LucideIcon
 } from 'lucide-react';
 import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -116,7 +120,7 @@ const Dashboard: React.FC = () => {
   if (!user || !firebaseUser) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Heart className="h-12 w-12 mx-auto text-primary mb-4 animate-pulse" />
+        <img src={logo} alt="NIRVANA" className="h-12 w-12 mx-auto mb-4 animate-pulse" />
         <p className="text-muted-foreground">Loading your dashboard...</p>
       </div>
     );
@@ -145,7 +149,7 @@ const Dashboard: React.FC = () => {
        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { 
-            icon: Heart, 
+            icon: logo, 
             label: 'Weekly Mood Avg', 
             value: (userStats?.weeklyMoodAverage || 0).toFixed(1),
             color: 'text-red-500' 
@@ -178,7 +182,7 @@ const Dashboard: React.FC = () => {
             <Card className="bg-background/50 backdrop-blur-sm">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  {typeof stat.icon === 'string' ? <img src={stat.icon} className={`h-5 w-5 ${stat.color}`} /> : <stat.icon className={`h-5 w-5 ${stat.color}`} />}
                   <span className="text-sm text-muted-foreground">{stat.label}</span>
                 </div>
                 <div className="text-2xl font-bold">{stat.value}</div>
@@ -202,7 +206,7 @@ const Dashboard: React.FC = () => {
               onClick={() => setActiveTab('mood')}
             >
               <div className="text-center">
-                <Heart className="h-6 w-6 mx-auto mb-2" />
+                <img src={logo} alt="NIRVANA" className="h-6 w-6 mx-auto mb-2" />
                 <div className="font-semibold">Mood Check-in</div>
                 <div className="text-sm text-primary-foreground/80">How are you feeling?</div>
               </div>
@@ -227,7 +231,7 @@ const Dashboard: React.FC = () => {
             >
               <div className="text-center">
                 <ClipboardList className="h-6 w-6 mx-auto mb-2" />
-                <div className="font-semibold">Wellness Quizzes</div>
+                <div className="font-semibold">Mental Assessment</div>
                 <div className="text-sm text-muted-foreground">Check in with yourself</div>
               </div>
             </Button>
@@ -265,8 +269,8 @@ const Dashboard: React.FC = () => {
          <div className="container flex h-14 items-center">
           <div className="mr-4 hidden md:flex">
             <a className="mr-6 flex items-center space-x-2" href="/">
-              <Heart className="h-6 w-6 text-primary" />
-              <span className="hidden font-bold sm:inline-block">MindEase</span>
+              <img src={logo} alt="NIRVANA" className="h-6 w-6" />
+              <span className="hidden font-bold sm:inline-block">NIRVANA</span>
             </a>
           </div>
           <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
@@ -285,10 +289,12 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             { id: 'overview', label: 'Overview', icon: TrendingUp },
-            { id: 'mood', label: 'Mood Tracker', icon: Heart },
+            { id: 'mood', label: 'Mood Tracker', icon: logo },
             { id: 'breathing', label: 'Breathing', icon: Brain },
-            { id: 'quizzes', label: 'Quizzes', icon: ClipboardList },
+            { id: 'quizzes', label: 'Mental Assessment', icon: ClipboardList },
+            { id: 'games', label: 'Games', icon: Gamepad },
             { id: 'chatbot', label: 'AI Therapy', icon: MessageCircle },
+            { id: 'community', label: 'Community', icon: Users },
             { id: 'resources', label: 'Resources', icon: BookOpen },
             { id: 'support', label: 'Support', icon: Phone },
             { id: 'booking', label: 'Book Session', icon: CalendarDays },
@@ -301,7 +307,7 @@ const Dashboard: React.FC = () => {
                 activeTab === tab.id ? 'gradient-primary text-primary-foreground border-0' : ''
               }`}
             >
-              <tab.icon className="h-4 w-4" />
+              {typeof tab.icon === 'string' ? <img src={tab.icon} className="h-4 w-4" /> : <tab.icon className="h-4 w-4" />}
               {tab.label}
             </Button>
           ))}
@@ -317,7 +323,9 @@ const Dashboard: React.FC = () => {
           {activeTab === 'mood' && <MoodTracker userId={firebaseUser.uid} />}
           {activeTab === 'breathing' && <div className="flex justify-center"><BreathingExercise /></div>}
           {activeTab === 'quizzes' && <MentalHealthQuizzes userId={firebaseUser.uid} />}
+          {activeTab === 'games' && <Games />}
           {activeTab === 'chatbot' && <AIChatbot />}
+          {activeTab === 'community' && <Community />}
           {activeTab === 'resources' && <Resources />}
           {activeTab === 'support' && <Support />}
           {activeTab === 'booking' && <Booking />}

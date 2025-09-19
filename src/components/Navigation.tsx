@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Menu, X, Moon, Sun } from 'lucide-react';
+import { Menu, X, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavigationProps {
@@ -29,7 +29,7 @@ const Navigation: React.FC<NavigationProps> = ({ darkMode, toggleDarkMode }) => 
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Heart className="h-8 w-8 text-primary" />
+            <img src="/logo.png" alt="NIRVANA Logo" className="h-8 w-8" />
             <span className="text-xl font-bold gradient-primary bg-clip-text text-transparent">
               NIRVANA
             </span>

@@ -73,8 +73,7 @@ const AIChatbot: React.FC = () => {
       console.error("Error sending message:", error);
       const errorMessage: ChatMessage = {
         role: 'model',
-        parts: [{ text: "Oh no! It seems I'm a bit tangled up at the moment. 🧠 Please give me a moment and try again." }]
-      };
+        parts: [{ text: "😔 Oops, I’m really sorry… something went wrong on my side.But hey, don’t stress about it! You can: 🌬 Try a quick breathing exercise to relax🎮 Play some fun mini-games available for free🧠 Take a short quiz/test to keep your mind engaged" }] };
       setHistory(prevHistory => [...prevHistory, errorMessage]);
     } finally {
       setIsLoading(false);

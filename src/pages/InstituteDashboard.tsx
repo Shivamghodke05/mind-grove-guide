@@ -15,10 +15,12 @@ import {
   Clock,
   Heart,
   Moon,
-  Sun
+  Sun,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface InstituteUser {
   name: string;
@@ -28,6 +30,7 @@ interface InstituteUser {
 const AdminDashboard = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState<InstituteUser | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Theme setup
@@ -50,6 +53,12 @@ const AdminDashboard = () => {
     setDarkMode(newDarkMode);
     localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
     document.documentElement.classList.toggle('dark', newDarkMode);
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/auth');
   };
 
   const stats = [
@@ -170,14 +179,24 @@ const AdminDashboard = () => {
             Anonymous insights into student mental health trends and platform usage
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleDarkMode}
-          className="text-muted-foreground hover:text-primary"
-        >
-          {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDarkMode}
+            className="text-muted-foreground hover:text-primary"
+          >
+            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSignOut}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Key Metrics */}

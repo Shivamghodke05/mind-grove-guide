@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Heart, Mail, Lock, User, GraduationCap, Building2 } from 'lucide-react';
+import { Mail, Lock, User, GraduationCap, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { 
   signInWithPopup, 
@@ -187,9 +187,9 @@ const Auth: React.FC = () => {
           className="w-full max-w-md"
         >
           <div className="text-center mb-8">
-            <Heart className="h-12 w-12 mx-auto text-primary mb-4" />
+            <img src="/logo.png" alt="NIRVANA" className="h-12 w-12 mx-auto mb-4" />
             <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-              Welcome to MindEase
+              Welcome to NIRVANA
             </h1>
             <p className="text-muted-foreground mt-2">
               Choose how you'd like to continue
@@ -264,9 +264,9 @@ const Auth: React.FC = () => {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <Heart className="h-12 w-12 mx-auto text-primary mb-4" />
+          <img src="/logo.png" alt="NIRVANA" className="h-12 w-12 mx-auto mb-4" />
           <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-            {mode === 'signin' ? 'Welcome Back' : 'Join MindEase'}
+            {mode === 'signin' ? 'Welcome Back' : 'Join NIRVANA'}
           </h1>
           <p className="text-muted-foreground mt-2">
             {mode === 'signin' 
